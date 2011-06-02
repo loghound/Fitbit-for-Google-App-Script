@@ -1,15 +1,14 @@
 // This script will pull down your fitbit data
 // and push it into a spreadsheet
-// Units are metric (kg, km) unless otherwise noted 
+// Units are metric (kg, km) unless otherwise noted
 // Suggestions/comments/improvements?  Let me know loghound@gmail.com
 //
 //
-
 /**** Length of time to look at.
  * From fitbit documentation values are 
  * 1d, 7d, 30d, 1w, 1m, 3m, 6m, 1y, max.
 */
-var period="max";
+var period = "30d";
 /**
  * Key of ScriptProperty for Firtbit consumer key.
  * @type {String}
@@ -33,7 +32,13 @@ function refreshTimeSeries() {
         return;
     }
 
-    authorize();
+    var user = authorize();
+    var doc = SpreadsheetApp.getActiveSpreadsheet();
+    doc.setFrozenRows(2);
+    // two header rows
+    doc.getRange("a1").setValue(user.fullName);
+    doc.getRange("a1").setComment("DOB:" + user.dateOfBirth)
+    doc.getRange("b1").setValue(user.country + "/" + user.state + "/" + user.city);
 
     var options =
     {
@@ -45,21 +50,23 @@ function refreshTimeSeries() {
     // get inspired here http://wiki.fitbit.com/display/API/API-Get-Time-Series
     var activities = ["activities/log/steps", "activities/log/distance", "activities/log/activeScore", "activities/log/calories",
     "activities/log/minutesSedentary", "activities/log/minutesLightlyActive", "activities/log/minutesFairlyActive", "activities/log/minutesVeryActive",
-    "sleep/timeInBed", "sleep/minutesAsleep", "sleep/awakeningsCount"]
+    "sleep/timeInBed", "sleep/minutesAsleep", "sleep/awakeningsCount",
+    "foods/log/caloriesIn"]
     for (var activity in activities) {
         var dateString = Utilities.formatDate(new Date(), "GMT", "yyyy-MM-dd");
+        dateString = "today";
         var currentActivity = activities[activity];
         try {
             var result = UrlFetchApp.fetch("http://api.fitbit.com/1/user/-/" + currentActivity + "/date/" + dateString
-            + "/"+period+".json", options);
+            + "/" + period + ".json", options);
             //
         } catch(exception) {
             Logger.log(exception);
         }
         var o = Utilities.jsonParse(result.getContentText());
-        var doc = SpreadsheetApp.getActiveSpreadsheet();
-        var cell = doc.getRange('a2');
-        var titleCell = doc.getRange("a1");
+
+        var cell = doc.getRange('a3');
+        var titleCell = doc.getRange("a2");
         titleCell.setValue("Date");
         var title = currentActivity.split("/");
         title = title[title.length - 1];
@@ -163,6 +170,8 @@ function renderFitbitConfigurationDialog() {
     consumerSecret.setWidth("100%");
     consumerSecret.setText(getConsumerSecret());
 
+
+
     var saveHandler = app.createServerClickHandler("saveConfiguration");
     var saveButton = app.createButton("Save Configuration", saveHandler);
 
@@ -203,6 +212,9 @@ function authorize() {
     var result = UrlFetchApp.fetch("http://api.fitbit.com/1/user/-/profile.json", options);
     //
     var o = Utilities.jsonParse(result.getContentText());
+
+    return o.user;
+    // options are dateOfBirth, nickname, state, city, fullName, etc.  see http://wiki.fitbit.com/display/API/API-Get-User-Info
 }
 
 
@@ -221,8 +233,8 @@ function onOpen() {
 }
 
 function onInstall() {
-    onOpen();     // put the menu when script is installed
-
+    onOpen();
+    // put the menu when script is installed
 }
 
 
