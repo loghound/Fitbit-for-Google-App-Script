@@ -13,6 +13,13 @@ Sadly to get started is a bit of a pain.
 7. Run the 'refreshTimeSeries" script to get your data
 8. Profit!
 
+
+Want to help?  here are some ideas to enhance this
+
+1.  Add the ability to select which 'columns' you want to see
+2.  Get smarter about how long a time series to pull down -- only pull down newer data
+3.  Make a template with interesting data or graphs and share it.
+
 I've submitted this to google to include int he script gallery so it might get easier eventually.
 
 Enjoy and let me know any suggestions/feedback.
