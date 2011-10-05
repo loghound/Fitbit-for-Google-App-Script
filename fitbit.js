@@ -25,6 +25,7 @@ var CONSUMER_SECRET_PROPERTY_NAME = "fitbitConsumerSecret";
 var LOGGABLES = ["activities/log/steps",
                  "activities/log/distance",
                  "activities/log/activeScore",
+                 "activities/log/activityCalories",
                  "activities/log/calories",
                  "foods/log/caloriesIn",
                  "activities/log/minutesSedentary",
@@ -33,7 +34,11 @@ var LOGGABLES = ["activities/log/steps",
                  "activities/log/minutesVeryActive",
                  "sleep/timeInBed",
                  "sleep/minutesAsleep",
-                 "sleep/awakeningsCount"
+                 "sleep/minutesAwake",
+                 "sleep/awakeningsCount",
+                 "body/weight",
+                 "body/bmi",
+                 "body/fat",
                  ];
 
 
