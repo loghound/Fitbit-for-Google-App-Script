@@ -1,6 +1,6 @@
 This little script runs in the Google App Script environment.
 
-Specifically it runs in [Googles Spreadsheets][http://docs.google.com].  It lets you suck down your fitbit data and the do all kinds of analysis.  It's also an easy way to get started with the fitbit API.
+Specifically it runs in [Googles Spreadsheets][0].  It lets you suck down your fitbit data and the do all kinds of analysis.  It's also an easy way to get started with the fitbit API.
 
 Sadly to get started is a bit of a pain.
 
@@ -23,4 +23,4 @@ I've submitted this to google to include int he script gallery so it might get e
 
 Enjoy and let me know any suggestions/feedback.
 
--John
+[0]: http://docs.google.com
