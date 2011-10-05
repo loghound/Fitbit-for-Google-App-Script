@@ -1,6 +1,6 @@
-This little script runs in the Gooel App Script environemnt.
+This little script runs in the Google App Script environment.
 
-Specificlally it runs in googles spreadsheets.  It lets you suck down your fitbit data and the do all kinds of analysis.  It's also an easy way to get started with the fitbit API.
+Specifically it runs in [Googles Spreadsheets][http://docs.google.com].  It lets you suck down your fitbit data and the do all kinds of analysis.  It's also an easy way to get started with the fitbit API.
 
 Sadly to get started is a bit of a pain.
 
@@ -12,7 +12,6 @@ Sadly to get started is a bit of a pain.
 6. Run the "Authorize" script -- this will run through the oauth dance.
 7. Run the 'refreshTimeSeries" script to get your data
 8. Profit!
-
 
 Want to help?  here are some ideas to enhance this
 

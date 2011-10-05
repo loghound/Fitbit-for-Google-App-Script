@@ -8,7 +8,7 @@
  * From fitbit documentation values are 
  * 1d, 7d, 30d, 1w, 1m, 3m, 6m, 1y, max.
 */
-var period = "30d";
+var period = "max";
 /**
  * Key of ScriptProperty for Firtbit consumer key.
  * @type {String}
@@ -22,6 +22,11 @@ var CONSUMER_KEY_PROPERTY_NAME = "fitbitConsumerKey";
  * @const
  */
 var CONSUMER_SECRET_PROPERTY_NAME = "fitbitConsumerSecret";
+
+var loggables = ["activities/log/steps", "activities/log/distance", "activities/log/activeScore", "activities/log/calories",
+    "activities/log/minutesSedentary", "activities/log/minutesLightlyActive", "activities/log/minutesFairlyActive", "activities/log/minutesVeryActive",
+    "sleep/timeInBed", "sleep/minutesAsleep", "sleep/awakeningsCount",
+    "foods/log/caloriesIn"];
 
 
 function refreshTimeSeries() {
@@ -39,6 +44,8 @@ function refreshTimeSeries() {
     doc.getRange("a1").setValue(user.fullName);
     doc.getRange("a1").setComment("DOB:" + user.dateOfBirth)
     doc.getRange("b1").setValue(user.country + "/" + user.state + "/" + user.city);
+  doc.getRange("c1").setValue("Loggables:");
+  doc.getRange("c1").setComment(getLoggables());
 
     var options =
     {
@@ -48,10 +55,7 @@ function refreshTimeSeries() {
     };
 
     // get inspired here http://wiki.fitbit.com/display/API/API-Get-Time-Series
-    var activities = ["activities/log/steps", "activities/log/distance", "activities/log/activeScore", "activities/log/calories",
-    "activities/log/minutesSedentary", "activities/log/minutesLightlyActive", "activities/log/minutesFairlyActive", "activities/log/minutesVeryActive",
-    "sleep/timeInBed", "sleep/minutesAsleep", "sleep/awakeningsCount",
-    "foods/log/caloriesIn"]
+    var activities = getLoggables();
     for (var activity in activities) {
         var dateString = Utilities.formatDate(new Date(), "GMT", "yyyy-MM-dd");
         dateString = "today";
@@ -114,6 +118,20 @@ function setConsumerKey(key) {
 }
 
 /**
+ * @param Array loggable API timeseries
+ */
+function setLoggables(loggable) {
+  ScriptProperties.setProperty("loggables", loggable);
+}
+function getLoggables() {
+  var loggable = ScriptProperties.getProperty("loggables");
+  if (loggable == null) {
+      loggable = [];
+  }
+  return loggable.split(',');
+}
+
+/**
  * @return String OAuth consumer secret to use when tweeting.
  */
 function getConsumerSecret() {
@@ -133,9 +151,9 @@ function setConsumerSecret(secret) {
 
 /** Retrieve config params from the UI and store them. */
 function saveConfiguration(e) {
-
     setConsumerKey(e.parameter.consumerKey);
     setConsumerSecret(e.parameter.consumerSecret);
+    setLoggables(e.parameter.loggables);
     var app = UiApp.getActiveApplication();
     app.close();
     return app;
@@ -170,19 +188,32 @@ function renderFitbitConfigurationDialog() {
     consumerSecret.setWidth("100%");
     consumerSecret.setText(getConsumerSecret());
 
-
-
     var saveHandler = app.createServerClickHandler("saveConfiguration");
     var saveButton = app.createButton("Save Configuration", saveHandler);
 
     var listPanel = app.createGrid(4, 2);
-    listPanel.setStyleAttribute("margin-top", "10px")
-    listPanel.setWidth("90%");
     listPanel.setWidget(1, 0, consumerKeyLabel);
     listPanel.setWidget(1, 1, consumerKey);
     listPanel.setWidget(2, 0, consumerSecretLabel);
     listPanel.setWidget(2, 1, consumerSecret);
-
+  
+    // add checkboxes to select loggables
+  var loggables = app.createListBox(true).setId("loggables").setName("loggables");
+  loggables.setVisibleItemCount(3);
+  loggables.addItem("activities/log/steps");
+  loggables.addItem("activities/log/distance");
+  loggables.addItem("activities/log/activeScore");
+  loggables.addItem("activities/log/calories");
+  loggables.addItem("foods/log/caloriesIn");
+  loggables.addItem("activities/log/minutesSedentary");
+  loggables.addItem("activities/log/minutesLightlyActive");
+  loggables.addItem("activities/log/minutesFairlyActive");
+  loggables.addItem("activities/log/minutesVeryActive");
+  loggables.addItem("sleep/timeInBed");
+  loggables.addItem("sleep/minutesAsleep");
+  loggables.addItem("sleep/awakeningsCount");
+    listPanel.setWidget(3, 0, app.createLabel("Loggables:"));
+    listPanel.setWidget(3, 1, loggables);
     // Ensure that all form fields get sent along to the handler
     saveHandler.addCallbackElement(listPanel);
 
@@ -236,5 +267,4 @@ function onInstall() {
     onOpen();
     // put the menu when script is installed
 }
-
 
