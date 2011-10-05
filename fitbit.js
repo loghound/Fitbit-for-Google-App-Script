@@ -3,12 +3,6 @@
 // Units are metric (kg, km) unless otherwise noted
 // Suggestions/comments/improvements?  Let me know loghound@gmail.com
 //
-//
-/**** Length of time to look at.
- * From fitbit documentation values are 
- * 1d, 7d, 30d, 1w, 1m, 3m, 6m, 1y, max.
-*/
-var period = "max";
 /**
  * Key of ScriptProperty for Firtbit consumer key.
  * @type {String}
@@ -28,9 +22,19 @@ var CONSUMER_SECRET_PROPERTY_NAME = "fitbitConsumerSecret";
  * @type String[]
  * @const
  */
-var loggables = ["activities/log/steps", "activities/log/distance", "activities/log/activeScore", "activities/log/calories",
-    "activities/log/minutesSedentary", "activities/log/minutesLightlyActive", "activities/log/minutesFairlyActive", "activities/log/minutesVeryActive",
-    "sleep/timeInBed", "sleep/minutesAsleep", "sleep/awakeningsCount", "foods/log/caloriesIn"];
+var LOGGABLES = ["activities/log/steps",
+                 "activities/log/distance",
+                 "activities/log/activeScore",
+                 "activities/log/calories",
+                 "foods/log/caloriesIn",
+                 "activities/log/minutesSedentary",
+                 "activities/log/minutesLightlyActive",
+                 "activities/log/minutesFairlyActive",
+                 "activities/log/minutesVeryActive",
+                 "sleep/timeInBed",
+                 "sleep/minutesAsleep",
+                 "sleep/awakeningsCount"
+                 ];
 
 
 function refreshTimeSeries() {
@@ -45,17 +49,19 @@ function refreshTimeSeries() {
     doc.setFrozenRows(2);
     // header rows
     doc.getRange("a1").setValue(user.fullName);
-    doc.getRange("a1").setComment("DOB:" + user.dateOfBirth)
+    doc.getRange("a1").setComment("DOB:" + user.dateOfBirth);
     doc.getRange("b1").setValue(user.country + "/" + user.state + "/" + user.city);
     // add the loggables for the last update
     doc.getRange("c1").setValue("Loggables:");
     doc.getRange("c1").setComment(getLoggables());
+    // period for the last update
+    doc.getRange("d1").setValue("Period: " + getPeriod());
 
     var options =
     {
         "oAuthServiceName": "fitbit",
         "oAuthUseToken": "always",
-        "method": "GET",
+        "method": "GET"
     };
 
     // get inspired here http://wiki.fitbit.com/display/API/API-Get-Time-Series
@@ -66,7 +72,7 @@ function refreshTimeSeries() {
         var currentActivity = activities[activity];
         try {
             var result = UrlFetchApp.fetch("http://api.fitbit.com/1/user/-/" + currentActivity + "/date/" + dateString
-            + "/" + period + ".json", options);
+            + "/" + getPeriod() + ".json", options);
             //
         } catch(exception) {
             Logger.log(exception);
@@ -132,9 +138,23 @@ function setLoggables(loggable) {
 function getLoggables() {
     var loggable = ScriptProperties.getProperty("loggables");
     if (loggable == null) {
-        loggable = [];
+        loggable = LOGGABLES;
+    } else {
+      loggable = loggable.split(',');
     }
-    return loggable.split(',');
+    return loggable;
+}
+
+function setPeriod(period) {
+    ScriptProperties.setProperty("period", period);
+}
+
+function getPeriod() {
+    var period = ScriptProperties.getProperty("period");
+    if(period == null) {
+        period = "30d";
+    }
+    return period;
 }
 
 /**
@@ -160,6 +180,7 @@ function saveConfiguration(e) {
     setConsumerKey(e.parameter.consumerKey);
     setConsumerSecret(e.parameter.consumerSecret);
     setLoggables(e.parameter.loggables);
+    setPeriod(e.parameter.period);
     var app = UiApp.getActiveApplication();
     app.close();
     return app;
@@ -197,7 +218,7 @@ function renderFitbitConfigurationDialog() {
     var saveHandler = app.createServerClickHandler("saveConfiguration");
     var saveButton = app.createButton("Save Configuration", saveHandler);
 
-    var listPanel = app.createGrid(4, 2);
+    var listPanel = app.createGrid(6, 2);
     listPanel.setWidget(1, 0, consumerKeyLabel);
     listPanel.setWidget(1, 1, consumerKey);
     listPanel.setWidget(2, 0, consumerSecretLabel);
@@ -206,20 +227,21 @@ function renderFitbitConfigurationDialog() {
     // add checkboxes to select loggables
     var loggables = app.createListBox(true).setId("loggables").setName("loggables");
     loggables.setVisibleItemCount(3);
-    loggables.addItem("activities/log/steps");
-    loggables.addItem("activities/log/distance");
-    loggables.addItem("activities/log/activeScore");
-    loggables.addItem("activities/log/calories");
-    loggables.addItem("foods/log/caloriesIn");
-    loggables.addItem("activities/log/minutesSedentary");
-    loggables.addItem("activities/log/minutesLightlyActive");
-    loggables.addItem("activities/log/minutesFairlyActive");
-    loggables.addItem("activities/log/minutesVeryActive");
-    loggables.addItem("sleep/timeInBed");
-    loggables.addItem("sleep/minutesAsleep");
-    loggables.addItem("sleep/awakeningsCount");
-    listPanel.setWidget(3, 0, app.createLabel("Loggables:"));
+    for (var resource in LOGGABLES) {
+        loggables.addItem(LOGGABLES[resource]);
+    }
+    listPanel.setWidget(3, 0, app.createLabel("Resources:"));
     listPanel.setWidget(3, 1, loggables);
+
+    var period = app.createListBox(false).setId("period").setName("period");
+    period.setVisibleItemCount(1);
+    for(var i = 1;i < 31;i++) {
+        period.addItem(i + "d");
+    }
+    period.addItem("max");
+    listPanel.setWidget(4, 0, app.createLabel("Period: (in days)"));
+    listPanel.setWidget(4, 1, period);
+
     // Ensure that all form fields get sent along to the handler
     saveHandler.addCallbackElement(listPanel);
 
@@ -242,7 +264,7 @@ function authorize() {
     var options =
     {
         "oAuthServiceName": "fitbit",
-        "oAuthUseToken": "always",
+        "oAuthUseToken": "always"
     };
 
     // get The profile but don't do anything with it -- just to force authentication
@@ -252,7 +274,6 @@ function authorize() {
     return o.user;
     // options are dateOfBirth, nickname, state, city, fullName, etc.  see http://wiki.fitbit.com/display/API/API-Get-User-Info
 }
-
 
 /** When the spreadsheet is opened, add a Fitbit menu. */
 function onOpen() {
