@@ -1,6 +1,6 @@
-This little script runs in the Gooel App Script environemnt.
+This little script runs in the Google App Script environment.
 
-Specificlally it runs in googles spreadsheets.  It lets you suck down your fitbit data and the do all kinds of analysis.  It's also an easy way to get started with the fitbit API.
+Specifically it runs in [Googles Spreadsheets][0].  It lets you suck down your fitbit data and the do all kinds of analysis.  It's also an easy way to get started with the fitbit API.
 
 Sadly to get started is a bit of a pain.
 
@@ -13,7 +13,6 @@ Sadly to get started is a bit of a pain.
 7. Run the 'refreshTimeSeries" script to get your data
 8. Profit!
 
-
 Want to help?  here are some ideas to enhance this
 
 1.  Add the ability to select which 'columns' you want to see
@@ -24,4 +23,4 @@ I've submitted this to google to include int he script gallery so it might get e
 
 Enjoy and let me know any suggestions/feedback.
 
--John
+[0]: http://docs.google.com
