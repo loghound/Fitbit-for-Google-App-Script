@@ -42,6 +42,7 @@ function refreshTimeSeries() {
     return;
   }
 
+  Logger.log('Refreshing timeseries data...');
   var user = authorize();
   var doc = SpreadsheetApp.getActiveSpreadsheet();
   doc.setFrozenRows(2);
@@ -65,6 +66,7 @@ function refreshTimeSeries() {
   // get inspired here http://wiki.fitbit.com/display/API/API-Get-Time-Series
   var activities = getLoggables();
   for ( var activity in activities) {
+    Logger.log('Refreshing ' + activity)
     var dateString = "today";
     var currentActivity = activities[activity];
     try {
