@@ -47,20 +47,24 @@ function refreshTimeSeries() {
   var doc = SpreadsheetApp.getActiveSpreadsheet();
   doc.setFrozenRows(2);
   // header rows
-  doc.getRange("a1").setValue(user.fullName);
+  doc.getRange("a1").setValue(user.displayName);
   doc.getRange("a1").setComment("DOB:" + user.dateOfBirth);
   doc.getRange("b1").setValue(
-      user.country + "/" + user.state + "/" + user.city);
+      user.country);
   // add the loggables for the last update
   doc.getRange("c1").setValue("Loggables:");
   doc.getRange("c1").setComment(getLoggables());
   // period for the last update
   doc.getRange("d1").setValue("Period: " + getPeriod());
+  doc.getRange("e1").setValue(user.avatar);
 
   var options = {
     "oAuthServiceName" : "fitbit",
     "oAuthUseToken" : "always",
-    "method" : "GET"
+    "method" : "GET",
+    "headers": {
+        "Accept-Language": user.foodsLocale
+    }
   };
 
   // get inspired here http://wiki.fitbit.com/display/API/API-Get-Time-Series
@@ -95,7 +99,7 @@ function refreshTimeSeries() {
         var val = row[j];
         cell.offset(index, 0).setValue(val["dateTime"]);
         // set the date index
-        cell.offset(index, 1 + activity * 1.0).setValue(val["value"]);
+        cell.offset(index, 1 + activity * 1.0).setValue(Number(val["value"]));
         // set the value index index
         index++;
       }
@@ -197,6 +201,7 @@ function renderFitbitConfigurationDialog() {
   var doc = SpreadsheetApp.getActiveSpreadsheet();
   var app = UiApp.createApplication().setTitle("Configure Fitbit");
   app.setStyleAttribute("padding", "10px");
+  app.setHeight('0.9');
 
   var helpLabel = app
       .createLabel("From here you will configure access to fitbit -- Just supply your own"
@@ -226,8 +231,7 @@ function renderFitbitConfigurationDialog() {
   listPanel.setWidget(2, 1, consumerSecret);
 
   // add checkboxes to select loggables
-  var loggables = app.createListBox(true).setId("loggables").setName(
-      "loggables");
+  var loggables = app.createListBox(true).setId("loggables").setName("loggables");
   loggables.setVisibleItemCount(3);
   for ( var resource in LOGGABLES) {
     loggables.addItem(LOGGABLES[resource]);
@@ -235,8 +239,19 @@ function renderFitbitConfigurationDialog() {
   listPanel.setWidget(3, 0, app.createLabel("Resources:"));
   listPanel.setWidget(3, 1, loggables);
 
-  var period = app.createTextBox().setId("period").setName("period");
-  listPanel.setWidget(4, 0, app.createLabel("Period: (7d, 2w, 6m, 1y, max, ...)"));
+  var period = app.createListBox(false).setId("period").setName("period");
+  period.setVisibleItemCount(1);
+  // add valid timeperiods
+  period.addItem('1d');
+  period.addItem('7d');
+  period.addItem('30d');
+  period.addItem('1w');
+  period.addItem('1m');
+  period.addItem('3m');
+  period.addItem('6m');
+  period.addItem('1y');
+  period.addItem('max');
+  listPanel.setWidget(4, 0, app.createLabel("Period:"));
   listPanel.setWidget(4, 1, period);
 
   // Ensure that all form fields get sent along to the handler
