@@ -201,7 +201,6 @@ function renderFitbitConfigurationDialog() {
   var doc = SpreadsheetApp.getActiveSpreadsheet();
   var app = UiApp.createApplication().setTitle("Configure Fitbit");
   app.setStyleAttribute("padding", "10px");
-  app.setHeight('0.9');
 
   var helpLabel = app
       .createLabel("From here you will configure access to fitbit -- Just supply your own"
