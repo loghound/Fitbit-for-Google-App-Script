@@ -105,9 +105,12 @@ function refreshTimeSeries() {
       var row = o[i];
       for ( var j in row) {
         var val = row[j];
-        cell.offset(index, 0).setValue(val["dateTime"]);
+        var dateParts = val["dateTime"].split("-");
+        var date = new Date(dateParts[0], (dateParts[1]-1), dateParts[2], 0, 0, 0, 0);
+        var row_index = findRow(date);
+        doc.getActiveSheet().getRange(row_index, 1).setValue(val["dateTime"]);
         // set the date index
-        cell.offset(index, 1 + activity * 1.0).setValue(Number(val["value"]));
+        doc.getActiveSheet().getRange(row_index, 2 + activity * 1.0).setValue(Number(val["value"]));
         // set the value index index
         index++;
       }
@@ -339,4 +342,22 @@ function dump(arr, level) {
     dumped_text = "===>" + arr + "<===(" + typeof (arr) + ")";
   }
   return dumped_text;
+}
+
+function findRow(date) {
+  var doc = SpreadsheetApp.getActiveSpreadsheet();
+  var cell = doc.getRange("A3");
+  while ((cell.getValue() != "") && (cell.getValue() < date)) {
+    cell = cell.offset(1,0);
+  }
+  if (cell.getValue() > date) {
+    doc.insertRowBefore(cell.getRow())
+  }
+  return (cell.getRow());
+}
+
+function test() {
+  var date = new Date(2013,1,5,0,0,0,0);
+  var row = findRow(date);
+  Browser.msgBox(row);
 }
