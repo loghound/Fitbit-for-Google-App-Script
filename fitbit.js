@@ -33,8 +33,16 @@ var LOGGABLES = [ "activities/log/steps", "activities/log/distance",
     "activities/log/minutesFairlyActive",
     "activities/log/minutesVeryActive", "sleep/timeInBed",
     "sleep/minutesAsleep", "sleep/minutesAwake", "sleep/awakeningsCount",
-    "body/weight", "body/bmi", "body/fat", ];
+    "body/weight", "body/bmi", "body/fat" ];
 
+/**
+ * Default fetchable periods.
+ * 
+ * @type String[]
+ * @const
+ */
+var PERIODS = [ "1d", "7d", "30d", "1w", "1m", "3m", "6m", "1y", "max" ];
+                 
 function refreshTimeSeries() {
   // if the user has never configured ask him to do it here
   if (!isConfigured()) {
@@ -232,8 +240,12 @@ function renderFitbitConfigurationDialog() {
   // add checkboxes to select loggables
   var loggables = app.createListBox(true).setId("loggables").setName("loggables");
   loggables.setVisibleItemCount(3);
+  var current_loggables = getLoggables();
   for ( var resource in LOGGABLES) {
     loggables.addItem(LOGGABLES[resource]);
+    if (current_loggables.indexOf(LOGGABLES[resource]) > -1) {
+			loggables.setItemSelected(parseInt(resource), true);
+		}
   }
   listPanel.setWidget(3, 0, app.createLabel("Resources:"));
   listPanel.setWidget(3, 1, loggables);
@@ -241,15 +253,10 @@ function renderFitbitConfigurationDialog() {
   var period = app.createListBox(false).setId("period").setName("period");
   period.setVisibleItemCount(1);
   // add valid timeperiods
-  period.addItem('1d');
-  period.addItem('7d');
-  period.addItem('30d');
-  period.addItem('1w');
-  period.addItem('1m');
-  period.addItem('3m');
-  period.addItem('6m');
-  period.addItem('1y');
-  period.addItem('max');
+  for ( var resource in PERIODS) {
+    period.addItem(PERIODS[resource]);
+  }
+  period.setSelectedIndex(PERIODS.indexOf(getPeriod()));
   listPanel.setWidget(4, 0, app.createLabel("Period:"));
   listPanel.setWidget(4, 1, period);
 
