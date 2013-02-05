@@ -358,9 +358,3 @@ function findRow(date) {
   }
   return (cell.getRow());
 }
-
-function test() {
-  var date = new Date(2013,1,5,0,0,0,0);
-  var row = findRow(date);
-  Browser.msgBox(row);
-}
