@@ -96,23 +96,26 @@ function refreshTimeSeries() {
     var cell = doc.getRange('a3');
 
     // fill data
-    var index = 0;
     for ( var i in o) {
       // set title for this column
       var title = i.substring(i.lastIndexOf('-') + 1);
       titleCell.offset(0, 1 + activity * 1.0).setValue(title);
 
       var row = o[i];
+      var row_index = 0;
       for ( var j in row) {
         var val = row[j];
         var dateParts = val["dateTime"].split("-");
         var date = new Date(dateParts[0], (dateParts[1]-1), dateParts[2], 0, 0, 0, 0);
-        var row_index = findRow(date);
+        if ( row_index != 0 ) {
+          row_index++;
+        } else {
+          row_index = findRow(date);
+        }
         doc.getActiveSheet().getRange(row_index, 1).setValue(val["dateTime"]);
         // set the date index
         doc.getActiveSheet().getRange(row_index, 2 + activity * 1.0).setValue(Number(val["value"]));
         // set the value index index
-        index++;
       }
     }
   }
