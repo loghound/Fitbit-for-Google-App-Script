@@ -105,17 +105,21 @@ function refreshTimeSeries() {
       var row_index = 0;
       for ( var j in row) {
         var val = row[j];
+        
+        // Convert the date from the API to a real GS date needed for finding the right row.
         var dateParts = val["dateTime"].split("-");
         var date = new Date(dateParts[0], (dateParts[1]-1), dateParts[2], 0, 0, 0, 0);
+        
+        // Have we found a row yet? or do we need to look for it?
         if ( row_index != 0 ) {
           row_index++;
         } else {
           row_index = findRow(date);
         }
+        // Insert Date into first column
         doc.getActiveSheet().getRange(row_index, 1).setValue(val["dateTime"]);
-        // set the date index
+        // Insert value
         doc.getActiveSheet().getRange(row_index, 2 + activity * 1.0).setValue(Number(val["value"]));
-        // set the value index index
       }
     }
   }
@@ -347,14 +351,21 @@ function dump(arr, level) {
   return dumped_text;
 }
 
+// Find the right row for a date.
 function findRow(date) {
   var doc = SpreadsheetApp.getActiveSpreadsheet();
   var cell = doc.getRange("A3");
+  
+  // Find the first cell in first column which is either empty,
+  // or has an equal or bigger date than the one we are looking for.
   while ((cell.getValue() != "") && (cell.getValue() < date)) {
     cell = cell.offset(1,0);
   }
+  // If the cell we found has a newer date than ours, we need to
+  // insert a new row right before that.
   if (cell.getValue() > date) {
     doc.insertRowBefore(cell.getRow())
   }
+  // return only the number of the row.
   return (cell.getRow());
 }
