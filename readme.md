@@ -1,4 +1,4 @@
-This little script runs in the Google App Script environment.
+This little script (developed originally by [loghound][1]) runs in the Google App Script environment.
 
 Specifically it runs in [Google Spreadsheets][0].  It lets you suck down your Fitbit data and the do all kinds of analysis.  It's also an easy way to get started with the Fitbit API.
 
@@ -13,13 +13,5 @@ Sadly to get started is a bit of a pain.
 7. Run the 'refreshTimeSeries" script to get your data
 8. Profit!
 
-Want to help?  here are some ideas to enhance this
-
-1.  Get smarter about how long a time series to pull down -- only pull down newer data
-2.  Make a template with interesting data or graphs and share it.
-
-I've submitted this to google to include in the script gallery so it might get easier eventually.
-
-Enjoy and let me know any suggestions/feedback.
-
 [0]: http://docs.google.com
+[1]: https://github.com/loghound/Fitbit-for-Google-App-Script
