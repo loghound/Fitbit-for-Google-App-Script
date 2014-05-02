@@ -2,15 +2,15 @@
 // and push it into a spreadsheet
 // Units are metric (kg, km) unless otherwise noted
 // Suggestions/comments/improvements?  Let me know loghound@gmail.com
-//
-//
-/**** Length of time to look at.
+
+/** Length of time to look at.
  * From fitbit documentation values are 
  * 1d, 7d, 30d, 1w, 1m, 3m, 6m, 1y, max.
 */
 var period = "1y";
+
 /**
- * Key of ScriptProperty for Firtbit consumer key.
+ * Key of ScriptProperty for Fitbit consumer key.
  * @type {String}
  * @const
  */
@@ -148,24 +148,22 @@ function renderFitbitConfigurationDialog() {
     var helpLabel = app.createLabel(
     "From here you will configure access to fitbit -- Just supply your own"
     + "consumer key and secret \n\n"
-    + "Important:  To authroize this app you need to load the script in the script editor"
-    + " (tools->Script Manager) and then run the 'authorize' script.");
+    + "Important:  To authorize this app you need to load the script in the script editor"
+    + " (tools-->Script editor) and then run the 'authorize' script.");
     helpLabel.setStyleAttribute("text-align", "justify");
     helpLabel.setWidth("95%");
     var consumerKeyLabel = app.createLabel(
-    "Fitbit OAuth Consumer Key:");
+    "Fitbit Client (Consumer) Key:");
     var consumerKey = app.createTextBox();
     consumerKey.setName("consumerKey");
     consumerKey.setWidth("100%");
     consumerKey.setText(getConsumerKey());
     var consumerSecretLabel = app.createLabel(
-    "Fitbit OAuth Consumer Secret:");
+    "Fitbit Client (Consumer) Secret:");
     var consumerSecret = app.createTextBox();
     consumerSecret.setName("consumerSecret");
     consumerSecret.setWidth("100%");
     consumerSecret.setText(getConsumerSecret());
-
-
 
     var saveHandler = app.createServerClickHandler("saveConfiguration");
     var saveButton = app.createButton("Save Configuration", saveHandler);
