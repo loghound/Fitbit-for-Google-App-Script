@@ -2,15 +2,16 @@
 // and push it into a spreadsheet
 // Units are metric (kg, km) unless otherwise noted
 // Suggestions/comments/improvements?  Let me know loghound@gmail.com
-
-/** Length of time to look at.
+//
+//
+/**** Length of time to look at.
  * From fitbit documentation values are 
  * 1d, 7d, 30d, 1w, 1m, 3m, 6m, 1y, max.
 */
 var period = "1y";
 
 /**
- * Key of ScriptProperty for Fitbit consumer key.
+ * Key of ScriptProperty for Firtbit consumer key.
  * @type {String}
  * @const
  */
@@ -43,10 +44,13 @@ function refreshTimeSeries() {
     };
 
     // get inspired here http://wiki.fitbit.com/display/API/API-Get-Time-Series
-    var activities = ["activities/log/steps", "activities/log/distance", "activities/activityCalories", "activities/log/calories", "foods/log/caloriesIn",
-    "activities/caloriesBMR", "activities/log/minutesSedentary", "activities/log/minutesLightlyActive", "activities/log/minutesFairlyActive", 
-    "activities/log/minutesVeryActive", "sleep/timeInBed", "sleep/minutesAsleep", "sleep/minutesAwake", "sleep/awakeningsCount", "sleep/startTime",  
-    "sleep/minutesToFallAsleep", "sleep/minutesAfterWakeup", "sleep/efficiency", "foods/log/water", "body/weight", "body/bmi"]
+    var activities = ["foods/log/caloriesIn", "foods/log/water", "activities/calories", "activities/caloriesBMR", "activities/steps", 
+"activities/distance", "activities/floors", "activities/elevation", "activities/minutesSedentary", "activities/minutesLightlyActive", 
+"activities/minutesFairlyActive", "activities/minutesVeryActive", "activities/activityCalories", "activities/tracker/calories", "activities/tracker/steps", 
+"activities/tracker/distance", "activities/tracker/floors", "activities/tracker/elevation", "activities/tracker/minutesSedentary", 
+"activities/tracker/minutesLightlyActive", "activities/tracker/minutesFairlyActive", "activities/tracker/minutesVeryActive", 
+"activities/tracker/activityCalories", "sleep/startTime", "sleep/timeInBed", "sleep/minutesAsleep", "sleep/awakeningsCount", "sleep/minutesAwake", 
+"sleep/minutesToFallAsleep", "sleep/minutesAfterWakeup", "sleep/efficiency", "body/weight", "body/bmi", "body/fat"]
     for (var activity in activities) {
         var dateString = Utilities.formatDate(new Date(), "GMT", "yyyy-MM-dd");
         dateString = "today";
@@ -148,22 +152,24 @@ function renderFitbitConfigurationDialog() {
     var helpLabel = app.createLabel(
     "From here you will configure access to fitbit -- Just supply your own"
     + "consumer key and secret \n\n"
-    + "Important:  To authorize this app you need to load the script in the script editor"
-    + " (tools-->Script editor) and then run the 'authorize' script.");
+    + "Important:  To authroize this app you need to load the script in the script editor"
+    + " (tools->Script Manager) and then run the 'authorize' script.");
     helpLabel.setStyleAttribute("text-align", "justify");
     helpLabel.setWidth("95%");
     var consumerKeyLabel = app.createLabel(
-    "Fitbit Client (Consumer) Key:");
+    "Fitbit OAuth Consumer Key:");
     var consumerKey = app.createTextBox();
     consumerKey.setName("consumerKey");
     consumerKey.setWidth("100%");
     consumerKey.setText(getConsumerKey());
     var consumerSecretLabel = app.createLabel(
-    "Fitbit Client (Consumer) Secret:");
+    "Fitbit OAuth Consumer Secret:");
     var consumerSecret = app.createTextBox();
     consumerSecret.setName("consumerSecret");
     consumerSecret.setWidth("100%");
     consumerSecret.setText(getConsumerSecret());
+
+
 
     var saveHandler = app.createServerClickHandler("saveConfiguration");
     var saveButton = app.createButton("Save Configuration", saveHandler);
