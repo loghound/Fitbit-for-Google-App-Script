@@ -153,7 +153,8 @@ function renderFitbitConfigurationDialog() {
     "From here you will configure access to fitbit -- Just supply your own"
     + "consumer key and secret \n\n"
     + "Important: To authorize this app you need to load the script in the script editor"
-    + " (tools-->Script editor) and then run the 'authorize' script.");    helpLabel.setStyleAttribute("text-align", "justify");
+    + " (tools-->Script editor) and then run the 'authorize' script.");    
+    helpLabel.setStyleAttribute("text-align", "justify");
     helpLabel.setWidth("95%");
     var consumerKeyLabel = app.createLabel(
     "Fitbit Client (Consumer) Key:");
