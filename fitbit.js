@@ -82,7 +82,7 @@ function refreshTimeSeries() {
     var dateString = "today";
     var currentActivity = activities[activity];
     try {
-      var result = UrlFetchApp.fetch("http://api.fitbit.com/1/user/-/"
+      var result = UrlFetchApp.fetch("https://api.fitbit.com/1/user/-/"
           + currentActivity + "/date/" + dateString + "/"
           + getPeriod() + ".json", options);
     } catch (exception) {
@@ -283,9 +283,9 @@ function renderFitbitConfigurationDialog() {
 
 function authorize() {
   var oAuthConfig = UrlFetchApp.addOAuthService("fitbit");
-  oAuthConfig.setAccessTokenUrl("http://api.fitbit.com/oauth/access_token");
-  oAuthConfig.setRequestTokenUrl("http://api.fitbit.com/oauth/request_token");
-  oAuthConfig.setAuthorizationUrl("http://api.fitbit.com/oauth/authorize");
+  oAuthConfig.setAccessTokenUrl("https://api.fitbit.com/oauth/access_token");
+  oAuthConfig.setRequestTokenUrl("https://api.fitbit.com/oauth/request_token");
+  oAuthConfig.setAuthorizationUrl("https://api.fitbit.com/oauth/authorize");
   oAuthConfig.setConsumerKey(getConsumerKey());
   oAuthConfig.setConsumerSecret(getConsumerSecret());
 
@@ -297,7 +297,7 @@ function authorize() {
   // get The profile but don't do anything with it -- just to force
   // authentication
   var result = UrlFetchApp.fetch(
-      "http://api.fitbit.com/1/user/-/profile.json", options);
+      "https://api.fitbit.com/1/user/-/profile.json", options);
   var o = Utilities.jsonParse(result.getContentText());
 
   return o.user;
