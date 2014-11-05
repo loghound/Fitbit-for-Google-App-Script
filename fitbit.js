@@ -33,8 +33,16 @@ var LOGGABLES = [ "activities/log/steps", "activities/log/distance",
     "activities/log/minutesFairlyActive",
     "activities/log/minutesVeryActive", "sleep/timeInBed",
     "sleep/minutesAsleep", "sleep/minutesAwake", "sleep/awakeningsCount",
-    "body/weight", "body/bmi", "body/fat", ];
+    "body/weight", "body/bmi", "body/fat" ];
 
+/**
+ * Default fetchable periods.
+ * 
+ * @type String[]
+ * @const
+ */
+var PERIODS = [ "1d", "7d", "30d", "1w", "1m", "3m", "6m", "1y", "max" ];
+                 
 function refreshTimeSeries() {
   // if the user has never configured ask him to do it here
   if (!isConfigured()) {
@@ -88,20 +96,30 @@ function refreshTimeSeries() {
     var cell = doc.getRange('a3');
 
     // fill data
-    var index = 0;
     for ( var i in o) {
       // set title for this column
       var title = i.substring(i.lastIndexOf('-') + 1);
       titleCell.offset(0, 1 + activity * 1.0).setValue(title);
 
       var row = o[i];
+      var row_index = 0;
       for ( var j in row) {
         var val = row[j];
-        cell.offset(index, 0).setValue(val["dateTime"]);
-        // set the date index
-        cell.offset(index, 1 + activity * 1.0).setValue(Number(val["value"]));
-        // set the value index index
-        index++;
+        
+        // Convert the date from the API to a real GS date needed for finding the right row.
+        var dateParts = val["dateTime"].split("-");
+        var date = new Date(dateParts[0], (dateParts[1]-1), dateParts[2], 0, 0, 0, 0);
+        
+        // Have we found a row yet? or do we need to look for it?
+        if ( row_index != 0 ) {
+          row_index++;
+        } else {
+          row_index = findRow(date);
+        }
+        // Insert Date into first column
+        doc.getActiveSheet().getRange(row_index, 1).setValue(val["dateTime"]);
+        // Insert value
+        doc.getActiveSheet().getRange(row_index, 2 + activity * 1.0).setValue(Number(val["value"]));
       }
     }
   }
@@ -201,7 +219,6 @@ function renderFitbitConfigurationDialog() {
   var doc = SpreadsheetApp.getActiveSpreadsheet();
   var app = UiApp.createApplication().setTitle("Configure Fitbit");
   app.setStyleAttribute("padding", "10px");
-  app.setHeight('0.9');
 
   var helpLabel = app
       .createLabel("From here you will configure access to fitbit -- Just supply your own"
@@ -233,8 +250,12 @@ function renderFitbitConfigurationDialog() {
   // add checkboxes to select loggables
   var loggables = app.createListBox(true).setId("loggables").setName("loggables");
   loggables.setVisibleItemCount(3);
+  var current_loggables = getLoggables();
   for ( var resource in LOGGABLES) {
     loggables.addItem(LOGGABLES[resource]);
+    if (current_loggables.indexOf(LOGGABLES[resource]) > -1) {
+			loggables.setItemSelected(parseInt(resource), true);
+		}
   }
   listPanel.setWidget(3, 0, app.createLabel("Resources:"));
   listPanel.setWidget(3, 1, loggables);
@@ -242,15 +263,10 @@ function renderFitbitConfigurationDialog() {
   var period = app.createListBox(false).setId("period").setName("period");
   period.setVisibleItemCount(1);
   // add valid timeperiods
-  period.addItem('1d');
-  period.addItem('7d');
-  period.addItem('30d');
-  period.addItem('1w');
-  period.addItem('1m');
-  period.addItem('3m');
-  period.addItem('6m');
-  period.addItem('1y');
-  period.addItem('max');
+  for ( var resource in PERIODS) {
+    period.addItem(PERIODS[resource]);
+  }
+  period.setSelectedIndex(PERIODS.indexOf(getPeriod()));
   listPanel.setWidget(4, 0, app.createLabel("Period:"));
   listPanel.setWidget(4, 1, period);
 
@@ -333,4 +349,23 @@ function dump(arr, level) {
     dumped_text = "===>" + arr + "<===(" + typeof (arr) + ")";
   }
   return dumped_text;
+}
+
+// Find the right row for a date.
+function findRow(date) {
+  var doc = SpreadsheetApp.getActiveSpreadsheet();
+  var cell = doc.getRange("A3");
+  
+  // Find the first cell in first column which is either empty,
+  // or has an equal or bigger date than the one we are looking for.
+  while ((cell.getValue() != "") && (cell.getValue() < date)) {
+    cell = cell.offset(1,0);
+  }
+  // If the cell we found has a newer date than ours, we need to
+  // insert a new row right before that.
+  if (cell.getValue() > date) {
+    doc.insertRowBefore(cell.getRow())
+  }
+  // return only the number of the row.
+  return (cell.getRow());
 }
