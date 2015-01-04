@@ -56,12 +56,12 @@ function refreshTimeSeries() {
   doc.setFrozenRows(2);
   // header rows
   doc.getRange("a1").setValue(user.displayName);
-  doc.getRange("a1").setComment("DOB:" + user.dateOfBirth);
+  doc.getRange("a1").setNote("DOB:" + user.dateOfBirth);
   doc.getRange("b1").setValue(
       user.country);
   // add the loggables for the last update
   doc.getRange("c1").setValue("Loggables:");
-  doc.getRange("c1").setComment(getLoggables());
+  doc.getRange("c1").setNote(getLoggables());
   // period for the last update
   doc.getRange("d1").setValue("Period: " + getPeriod());
   doc.getRange("e1").setValue(user.avatar);
