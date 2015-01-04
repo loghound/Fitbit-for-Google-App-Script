@@ -64,7 +64,7 @@ function refreshTimeSeries() {
   doc.getRange("c1").setComment(getLoggables());
   // period for the last update
   doc.getRange("d1").setValue("Period: " + getPeriod());
-  doc.getRange("e1").setValue(user.avatar);
+  doc.getRange("e1").setValue("=image(\"" + user.avatar + "\";1)");
 
   var options = {
     "oAuthServiceName" : "fitbit",
