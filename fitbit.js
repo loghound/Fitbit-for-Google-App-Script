@@ -88,7 +88,7 @@ function refreshTimeSeries() {
     } catch (exception) {
       Logger.log(exception);
     }
-    var o = Utilities.jsonParse(result.getContentText());
+    var o = JSON.parse(result.getContentText());
 
     // set title
     var titleCell = doc.getRange("a2");
@@ -298,7 +298,7 @@ function authorize() {
   // authentication
   var result = UrlFetchApp.fetch(
       "https://api.fitbit.com/1/user/-/profile.json", options);
-  var o = Utilities.jsonParse(result.getContentText());
+  var o = JSON.parse(result.getContentText());
 
   return o.user;
   // options are dateOfBirth, nickname, state, city, fullName, etc. see
