@@ -42,6 +42,13 @@ var LOGGABLES = [ "activities/log/steps", "activities/log/distance",
  * @const
  */
 var PERIODS = [ "1d", "7d", "30d", "1w", "1m", "3m", "6m", "1y", "max" ];
+
+/**
+ * Instance of PropertiesService for access to ScriptProperties
+ * 
+ * @type {Object} scriptProperties
+ */
+var scriptProperties = PropertiesService.getScriptProperties();
                  
 function refreshTimeSeries() {
   // if the user has never configured ask him to do it here
@@ -56,12 +63,12 @@ function refreshTimeSeries() {
   doc.setFrozenRows(2);
   // header rows
   doc.getRange("a1").setValue(user.displayName);
-  doc.getRange("a1").setComment("DOB:" + user.dateOfBirth);
+  doc.getRange("a1").setNote("DOB:" + user.dateOfBirth);
   doc.getRange("b1").setValue(
       user.country);
   // add the loggables for the last update
   doc.getRange("c1").setValue("Loggables:");
-  doc.getRange("c1").setComment(getLoggables());
+  doc.getRange("c1").setNote(getLoggables());
   // period for the last update
   doc.getRange("d1").setValue("Period: " + getPeriod());
   doc.getRange("e1").setValue("=image(\"" + user.avatar + "\";1)");
@@ -88,7 +95,7 @@ function refreshTimeSeries() {
     } catch (exception) {
       Logger.log(exception);
     }
-    var o = Utilities.jsonParse(result.getContentText());
+    var o = JSON.parse(result.getContentText());
 
     // set title
     var titleCell = doc.getRange("a2");
@@ -133,7 +140,7 @@ function isConfigured() {
  * @return String OAuth consumer key to use when tweeting.
  */
 function getConsumerKey() {
-  var key = ScriptProperties.getProperty(CONSUMER_KEY_PROPERTY_NAME);
+  var key = scriptProperties.getProperty(CONSUMER_KEY_PROPERTY_NAME);
   if (key == null) {
     key = "";
   }
@@ -145,7 +152,7 @@ function getConsumerKey() {
  *      OAuth consumer key to use when tweeting.
  */
 function setConsumerKey(key) {
-  ScriptProperties.setProperty(CONSUMER_KEY_PROPERTY_NAME, key);
+  scriptProperties.setProperty(CONSUMER_KEY_PROPERTY_NAME, key);
 }
 
 /**
@@ -153,15 +160,16 @@ function setConsumerKey(key) {
  *      of String for loggable resources, i.e. "foods/log/caloriesIn"
  */
 function setLoggables(loggable) {
-  ScriptProperties.setProperty("loggables", loggable);
+  scriptProperties.setProperty('loggables', loggable);
 }
+
 /**
  * Returns the loggable resources as String[]
  * 
  * @return String[] loggable resources
  */
 function getLoggables() {
-  var loggable = ScriptProperties.getProperty("loggables");
+  var loggable = scriptProperties.getProperty('loggables');
   if (loggable == null) {
     loggable = LOGGABLES;
   } else {
@@ -171,11 +179,11 @@ function getLoggables() {
 }
 
 function setPeriod(period) {
-  ScriptProperties.setProperty("period", period);
+  scriptProperties.setProperty('period', period);
 }
 
 function getPeriod() {
-  var period = ScriptProperties.getProperty("period");
+  var period = scriptProperties.getProperty('period');
   if (period == null) {
     period = "30d";
   }
@@ -186,7 +194,7 @@ function getPeriod() {
  * @return String OAuth consumer secret to use when tweeting.
  */
 function getConsumerSecret() {
-  var secret = ScriptProperties.getProperty(CONSUMER_SECRET_PROPERTY_NAME);
+  var secret = scriptProperties.getProperty(CONSUMER_SECRET_PROPERTY_NAME);
   if (secret == null) {
     secret = "";
   }
@@ -198,7 +206,7 @@ function getConsumerSecret() {
  *      OAuth consumer secret to use when tweeting.
  */
 function setConsumerSecret(secret) {
-  ScriptProperties.setProperty(CONSUMER_SECRET_PROPERTY_NAME, secret);
+  scriptProperties.setProperty(CONSUMER_SECRET_PROPERTY_NAME, secret);
 }
 
 /** Retrieve config params from the UI and store them. */
@@ -298,7 +306,7 @@ function authorize() {
   // authentication
   var result = UrlFetchApp.fetch(
       "https://api.fitbit.com/1/user/-/profile.json", options);
-  var o = Utilities.jsonParse(result.getContentText());
+  var o = JSON.parse(result.getContentText());
 
   return o.user;
   // options are dateOfBirth, nickname, state, city, fullName, etc. see
