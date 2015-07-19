@@ -15,7 +15,7 @@ var period = "1y";
  * @type {String}
  * @const
  */
-var CONSUMER_KEY_PROPERTY_NAME = "fitbitConsumerKey";
+var CLIENT_ID_PROPERTY_NAME = "fitbitClientID";
 
 /**
  * Key of ScriptProperty for Fitbit consumer secret.
@@ -23,6 +23,13 @@ var CONSUMER_KEY_PROPERTY_NAME = "fitbitConsumerKey";
  * @const
  */
 var CONSUMER_SECRET_PROPERTY_NAME = "fitbitConsumerSecret";
+
+/**
+ * Key of Project.
+ * @type {String}
+ * @const
+ */
+var PROJECT_KEY_PROPERTY_NAME = "projectKey";
 
 
 /**
@@ -65,29 +72,21 @@ function refreshTimeSeries() {
   }
 
   Logger.log('Refreshing timeseries data...');
-  var user = authorize();
-  var doc = SpreadsheetApp.getActiveSpreadsheet();
+  var user = authorize().user;
+  Logger.log(user)
+  var doc = SpreadsheetApp.getActiveSpreadsheet()
   doc.setFrozenRows(2);
   // header rows
   doc.getRange("a1").setValue(user.displayName);
   doc.getRange("a1").setNote("DOB:" + user.dateOfBirth);
   doc.getRange("b1").setValue(
-      user.country);
+      user.locale);
   // add the loggables for the last update
   doc.getRange("c1").setValue("Loggables:");
   doc.getRange("c1").setNote(getLoggables());
   // period for the last update
   doc.getRange("d1").setValue("Period: " + getPeriod());
   doc.getRange("e1").setValue("=image(\"" + user.avatar + "\";1)");
-
-  var options = {
-    "oAuthServiceName" : "fitbit",
-    "oAuthUseToken" : "always",
-    "method" : "GET",
-    "headers": {
-        "Accept-Language": user.foodsLocale
-    }
-  };
 
   // get inspired here http://wiki.fitbit.com/display/API/API-Get-Time-Series
   var activities = getLoggables();
@@ -96,12 +95,26 @@ function refreshTimeSeries() {
     var dateString = "today";
     var currentActivity = activities[activity];
     try {
-      var result = UrlFetchApp.fetch("https://api.fitbit.com/1/user/-/"
+      var service = getService();
+
+      var options = {
+        "method" : "GET",
+        "headers": {
+          "Authorization": "Bearer " + service.getAccessToken()
+        }
+      };
+
+      if (service.hasAccess()) {
+        var url = "https://api.fitbit.com/1/user/-/"
           + currentActivity + "/date/" + dateString + "/"
-          + getPeriod() + ".json", options);
+          + getPeriod() + ".json";
+        Logger.log(options)
+        var result = UrlFetchApp.fetch(url, options);
+      }
     } catch (exception) {
       Logger.log(exception);
     }
+    Logger.log(result);
     var o = JSON.parse(result.getContentText());
 
     // set title
@@ -136,6 +149,7 @@ function refreshTimeSeries() {
         doc.getActiveSheet().getRange(row_index, 2 + activity * 1.0).setValue(Number(val["value"]));
       }
     }
+  }
 }
 
 function isConfigured() {
@@ -146,7 +160,7 @@ function isConfigured() {
  * @return String OAuth consumer key to use when tweeting.
  */
 function getConsumerKey() {
-  var key = scriptProperties.getProperty(CONSUMER_KEY_PROPERTY_NAME);
+  var key = scriptProperties.getProperty(CLIENT_ID_PROPERTY_NAME);
   if (key == null) {
     key = "";
   }
@@ -157,7 +171,25 @@ function getConsumerKey() {
  * @param String OAuth consumer key to use when tweeting.
  */
 function setConsumerKey(key) {
-  scriptProperties.setProperty(CONSUMER_KEY_PROPERTY_NAME, key);
+  scriptProperties.setProperty(CLIENT_ID_PROPERTY_NAME, key);
+}
+
+/**
+ * @return String Project key
+ */
+function getProjectKey() {
+  var key = scriptProperties.getProperty(PROJECT_KEY_PROPERTY_NAME);
+  if (key == null) {
+    key = "";
+  }
+  return key;
+}
+
+/**
+ * @param String Project key
+ */
+function setProjectKey(key) {
+  scriptProperties.setProperty(PROJECT_KEY_PROPERTY_NAME, key);
 }
 
 /**
@@ -216,8 +248,11 @@ function setConsumerSecret(secret) {
 /** Retrieve config params from the UI and store them. */
 function saveConfiguration(e) {
 
-    setConsumerKey(e.parameter.consumerKey);
+    setConsumerKey(e.parameter.clientID);
     setConsumerSecret(e.parameter.consumerSecret);
+    setProjectKey(e.parameter.projectKey);
+    setLoggables(e.parameter.loggables);
+    setPeriod(e.parameter.period);
     var app = UiApp.getActiveApplication();
     app.close();
     return app;
@@ -230,24 +265,34 @@ function renderFitbitConfigurationDialog() {
   var doc = SpreadsheetApp.getActiveSpreadsheet();
   var app = UiApp.createApplication().setTitle("Configure Fitbit");
   app.setStyleAttribute("padding", "10px");
+  app.setHeight('380');
 
   var helpLabel = app
-      .createLabel("From here you will configure access to fitbit -- Just supply your own"
-          + "consumer key and secret \n\n"
-          + "Important:  To authroize this app you need to load the script in the script editor"
-          + " (tools->Script Manager) and then run the 'authorize' script.");
+       .createLabel("From here you will configure access to fitbit -- Just supply your own"
+           + "client id and secret from dev.fitbit.com.  "
+           + " You can find the project key by loading the script in the script editor"
+           + " (tools->Script Editor..) and opening the project properties (file->Project properties). \n\n"
+           + " While in the script editor, you also need to add the OAuth2 library following these instructions: https://github.com/googlesamples/apps-script-oauth2/tree/0e7bcd464962321a75ccb97256d5373b27c4c2e1#setup. \n\n"
+           + " You also need to setup your Redirect URI at fitbit, substituting in your project key you just found and "
+           + "using the instructions here: https://github.com/googlesamples/apps-script-oauth2/tree/0e7bcd464962321a75ccb97256d5373b27c4c2e1#redirect-uri \n\n"
+           + "Important:  To authorize this app you need to run 'Authorize' from the fitbit menu.");
   helpLabel.setStyleAttribute("text-align", "justify");
   helpLabel.setWidth("95%");
-  var consumerKeyLabel = app.createLabel("Fitbit OAuth Consumer Key:");
+  var consumerKeyLabel = app.createLabel("Fitbit OAuth 2.0 Client ID:");
   var consumerKey = app.createTextBox();
-  consumerKey.setName("consumerKey");
+  consumerKey.setName("clientID");
   consumerKey.setWidth("100%");
   consumerKey.setText(getConsumerKey());
-  var consumerSecretLabel = app.createLabel("Fitbit OAuth Consumer Secret:");
+  var consumerSecretLabel = app.createLabel("Fitbit OAuth Client (Consumer) Secret:");
   var consumerSecret = app.createTextBox();
   consumerSecret.setName("consumerSecret");
   consumerSecret.setWidth("100%");
   consumerSecret.setText(getConsumerSecret());
+  var projectKeyLabel = app.createLabel("Project Key:");
+  var projectKey = app.createTextBox();
+  projectKey.setName("projectKey");
+  projectKey.setWidth("100%");
+  projectKey.setText(getProjectKey());
 
   var saveHandler = app.createServerClickHandler("saveConfiguration");
   var saveButton = app.createButton("Save Configuration", saveHandler);
@@ -257,6 +302,8 @@ function renderFitbitConfigurationDialog() {
   listPanel.setWidget(1, 1, consumerKey);
   listPanel.setWidget(2, 0, consumerSecretLabel);
   listPanel.setWidget(2, 1, consumerSecret);
+  listPanel.setWidget(3, 0, projectKeyLabel);
+  listPanel.setWidget(3, 1, projectKey);
 
   // add checkboxes to select loggables
   var loggables = app.createListBox(true).setId("loggables").setName("loggables");
@@ -268,8 +315,8 @@ function renderFitbitConfigurationDialog() {
 			loggables.setItemSelected(parseInt(resource), true);
 		}
   }
-  listPanel.setWidget(3, 0, app.createLabel("Resources:"));
-  listPanel.setWidget(3, 1, loggables);
+  listPanel.setWidget(4, 0, app.createLabel("Resources:"));
+  listPanel.setWidget(4, 1, loggables);
 
   var period = app.createListBox(false).setId("period").setName("period");
   period.setVisibleItemCount(1);
@@ -278,8 +325,8 @@ function renderFitbitConfigurationDialog() {
     period.addItem(PERIODS[resource]);
   }
   period.setSelectedIndex(PERIODS.indexOf(getPeriod()));
-  listPanel.setWidget(4, 0, app.createLabel("Period:"));
-  listPanel.setWidget(4, 1, period);
+  listPanel.setWidget(5, 0, app.createLabel("Period:"));
+  listPanel.setWidget(5, 1, period);
 
   // Ensure that all form fields get sent along to the handler
   saveHandler.addCallbackElement(listPanel);
@@ -292,30 +339,66 @@ function renderFitbitConfigurationDialog() {
   doc.show(app);
 }
 
-function authorize() {
-  var oAuthConfig = UrlFetchApp.addOAuthService("fitbit");
-  oAuthConfig.setAccessTokenUrl("https://api.fitbit.com/oauth/access_token");
-  oAuthConfig.setRequestTokenUrl("https://api.fitbit.com/oauth/request_token");
-  oAuthConfig.setAuthorizationUrl("https://api.fitbit.com/oauth/authorize");
-  oAuthConfig.setConsumerKey(getConsumerKey());
-  oAuthConfig.setConsumerSecret(getConsumerSecret());
+function getService() {
+  //Implement updated OAuth 2 support
+  //When using new OAuth1 library, callback URL length is too long, therefore doesn't work:
+  // https://github.com/googlesamples/apps-script-oauth1/issues/8
+  //
+  //Fitbit API:
+  //https://wiki.fitbit.com/display/API/OAuth+2.0
+  //Google App Script OAuth2 instructions:
+  //https://github.com/googlesamples/apps-script-oauth2
 
-  var options = {
-    "oAuthServiceName" : "fitbit",
-    "oAuthUseToken" : "always"
-  };
+  //modified from : https://github.com/googlesamples/apps-script-oauth1/issues/8#issuecomment-100309694
 
-  // get The profile but don't do anything with it -- just to force
-  // authentication
-  var result = UrlFetchApp.fetch(
-      "https://api.fitbit.com/1/user/-/profile.json", options);
-  var o = JSON.parse(result.getContentText());
+  return OAuth2.createService('fitbit')
+      .setAuthorizationBaseUrl('https://www.fitbit.com/oauth2/authorize')
+      .setTokenUrl('https://api.fitbit.com/oauth2/token')
+      .setClientId(getConsumerKey())
+      .setClientSecret(getConsumerSecret())
+      .setProjectKey(getProjectKey())
+      .setCallbackFunction('fitbitAuthCallback')
+      .setPropertyStore(PropertiesService.getScriptProperties())
+      .setScope('activity')
+      .setTokenHeaders({
+        'Authorization': 'Basic ' + Utilities.base64Encode(getConsumerKey() + ':' + getConsumerSecret())
+      });
 
-  return o.user;
-  // options are dateOfBirth, nickname, state, city, fullName, etc. see
-  // http://wiki.fitbit.com/display/API/API-Get-User-Info
 }
 
+function authorize() {
+  var service = getService()
+
+  if (service.hasAccess()) {
+    var url = 'https://api.fitbit.com/1/user/-/profile.json';
+       var response = UrlFetchApp.fetch(url, {
+      headers: {
+        'Authorization': 'Bearer ' + service.getAccessToken()
+      }
+    });
+    Logger.log(JSON.stringify(JSON.parse(response.getContentText()), null, 2));
+    return JSON.parse(response.getContentText())
+  } else {
+    var authorizationUrl = service.getAuthorizationUrl();
+    var template = HtmlService.createTemplate(
+        '<a href="<?= authorizationUrl ?>" target="_blank">Authorize</a>. ' +
+        'Reopen the sidebar when the authorization is complete.');
+    template.authorizationUrl = authorizationUrl;
+    var page = template.evaluate();
+    SpreadsheetApp.getUi().showSidebar(page);
+  }
+}
+
+// modified from: https://github.com/googlesamples/apps-script-oauth1/tree/9d074adc735e35c8966bcfa30114c205d69ab44e#3-handle-the-callback
+function fitbitAuthCallback(request) {
+  var service = getService();
+  var isAuthorized = service.handleCallback(request);
+  if (isAuthorized) {
+    return HtmlService.createHtmlOutput('Success! You can close this page.');
+  } else {
+    return HtmlService.createHtmlOutput('Denied. You can close this page');
+  }
+}
 
 /** When the spreadsheet is opened, add a Fitbit menu. */
 function onOpen() {
@@ -327,6 +410,10 @@ function onOpen() {
     {
         name: "Configure",
         functionName: "renderFitbitConfigurationDialog"
+    },
+    {
+        name: "Authorize",
+        functionName: "authorize"
     }];
     ss.addMenu("Fitbit", menuEntries);
 }
