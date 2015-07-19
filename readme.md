@@ -6,11 +6,11 @@ Sadly to get started is a bit of a pain:
 
 1. Create a new Google Spreadsheet.
 2. Go to Tools-->Script Editor
-3. Replace the template with fitbit.js
-4. Run the poorly named 'renderFitbitConfigurationDialog' and enter your consumer key and secret. You may need to run this twice as the first time it will ask you to authorize the script.
-5. Enter your credentials
-6. Run the "Authorize" script -- this will run through the oauth dance.
-7. Run the 'refreshTimeSeries" script to get your data
+3. Replace the template with fitbit.js & reload the spreadsheet
+4. From the Fitbit menu that should appear, run the Configure option
+5. Follow all the instructions given in the form that pops up
+6. Run the "Authorize" menu option -- this will run through the oauth dance.
+7. Run the 'Refresh fitbit Time Data" menu option to get your data
 8. Profit!
 
 [0]: http://drive.google.com
