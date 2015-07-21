@@ -1,4 +1,4 @@
-This little script (developed originally by [loghound][1]) runs in the Google App Script environment.
+This little script  runs in the Google App Script environment.
 
 Specifically it runs in [Google Spreadsheets][0]. It lets you suck down your Fitbit data and the do all kinds of analysis.  It's also an easy way to get started with the Fitbit API.
 
