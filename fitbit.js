@@ -3,25 +3,38 @@
 // Units are metric (kg, km) unless otherwise noted
 // Suggestions/comments/improvements?  Let me know loghound@gmail.com
 //
+//
+/**** Length of time to look at.
+ * From fitbit documentation values are
+ * 1d, 7d, 30d, 1w, 1m, 3m, 6m, 1y, max.
+*/
+var period = "1y";
+
 /**
- * Key of ScriptProperty for Firtbit consumer key.
- * 
+ * Key of ScriptProperty for Fitbit consumer key.
  * @type {String}
  * @const
  */
-var CONSUMER_KEY_PROPERTY_NAME = "fitbitConsumerKey";
+var CLIENT_ID_PROPERTY_NAME = "fitbitClientID";
 
 /**
  * Key of ScriptProperty for Fitbit consumer secret.
- * 
  * @type {String}
  * @const
  */
 var CONSUMER_SECRET_PROPERTY_NAME = "fitbitConsumerSecret";
 
 /**
+ * Key of Project.
+ * @type {String}
+ * @const
+ */
+var PROJECT_KEY_PROPERTY_NAME = "projectKey";
+
+
+/**
  * Default loggable resources.
- * 
+ *
  * @type String[]
  * @const
  */
@@ -37,13 +50,21 @@ var LOGGABLES = [ "activities/log/steps", "activities/log/distance",
 
 /**
  * Default fetchable periods.
- * 
+ *
  * @type String[]
  * @const
  */
 var PERIODS = [ "1d", "7d", "30d", "1w", "1m", "3m", "6m", "1y", "max" ];
-                 
+
+/**
+ * Instance of PropertiesService for access to ScriptProperties
+ *
+ * @type {Object} scriptProperties
+ */
+var scriptProperties = PropertiesService.getScriptProperties();
+
 function refreshTimeSeries() {
+
   // if the user has never configured ask him to do it here
   if (!isConfigured()) {
     renderFitbitConfigurationDialog();
@@ -51,29 +72,21 @@ function refreshTimeSeries() {
   }
 
   Logger.log('Refreshing timeseries data...');
-  var user = authorize();
-  var doc = SpreadsheetApp.getActiveSpreadsheet();
+  var user = authorize().user;
+  Logger.log(user)
+  var doc = SpreadsheetApp.getActiveSpreadsheet()
   doc.setFrozenRows(2);
   // header rows
   doc.getRange("a1").setValue(user.displayName);
-  doc.getRange("a1").setComment("DOB:" + user.dateOfBirth);
+  doc.getRange("a1").setNote("DOB:" + user.dateOfBirth);
   doc.getRange("b1").setValue(
-      user.country);
+      user.locale);
   // add the loggables for the last update
   doc.getRange("c1").setValue("Loggables:");
-  doc.getRange("c1").setComment(getLoggables());
+  doc.getRange("c1").setNote(getLoggables());
   // period for the last update
   doc.getRange("d1").setValue("Period: " + getPeriod());
-  doc.getRange("e1").setValue(user.avatar);
-
-  var options = {
-    "oAuthServiceName" : "fitbit",
-    "oAuthUseToken" : "always",
-    "method" : "GET",
-    "headers": {
-        "Accept-Language": user.foodsLocale
-    }
-  };
+  doc.getRange("e1").setValue("=image(\"" + user.avatar + "\";1)");
 
   // get inspired here http://wiki.fitbit.com/display/API/API-Get-Time-Series
   var activities = getLoggables();
@@ -82,13 +95,27 @@ function refreshTimeSeries() {
     var dateString = "today";
     var currentActivity = activities[activity];
     try {
-      var result = UrlFetchApp.fetch("https://api.fitbit.com/1/user/-/"
+      var service = getService();
+
+      var options = {
+        "method" : "GET",
+        "headers": {
+          "Authorization": "Bearer " + service.getAccessToken()
+        }
+      };
+
+      if (service.hasAccess()) {
+        var url = "https://api.fitbit.com/1/user/-/"
           + currentActivity + "/date/" + dateString + "/"
-          + getPeriod() + ".json", options);
+          + getPeriod() + ".json";
+        Logger.log(options)
+        var result = UrlFetchApp.fetch(url, options);
+      }
     } catch (exception) {
       Logger.log(exception);
     }
-    var o = Utilities.jsonParse(result.getContentText());
+    Logger.log(result);
+    var o = JSON.parse(result.getContentText());
 
     // set title
     var titleCell = doc.getRange("a2");
@@ -105,11 +132,11 @@ function refreshTimeSeries() {
       var row_index = 0;
       for ( var j in row) {
         var val = row[j];
-        
+
         // Convert the date from the API to a real GS date needed for finding the right row.
         var dateParts = val["dateTime"].split("-");
         var date = new Date(dateParts[0], (dateParts[1]-1), dateParts[2], 0, 0, 0, 0);
-        
+
         // Have we found a row yet? or do we need to look for it?
         if ( row_index != 0 ) {
           row_index++;
@@ -126,14 +153,14 @@ function refreshTimeSeries() {
 }
 
 function isConfigured() {
-  return getConsumerKey() != "" && getConsumerSecret() != "";
+    return getConsumerKey() != "" && getConsumerSecret() != "";
 }
 
 /**
  * @return String OAuth consumer key to use when tweeting.
  */
 function getConsumerKey() {
-  var key = ScriptProperties.getProperty(CONSUMER_KEY_PROPERTY_NAME);
+  var key = scriptProperties.getProperty(CLIENT_ID_PROPERTY_NAME);
   if (key == null) {
     key = "";
   }
@@ -141,11 +168,28 @@ function getConsumerKey() {
 }
 
 /**
- * @param String
- *      OAuth consumer key to use when tweeting.
+ * @param String OAuth consumer key to use when tweeting.
  */
 function setConsumerKey(key) {
-  ScriptProperties.setProperty(CONSUMER_KEY_PROPERTY_NAME, key);
+  scriptProperties.setProperty(CLIENT_ID_PROPERTY_NAME, key);
+}
+
+/**
+ * @return String Project key
+ */
+function getProjectKey() {
+  var key = scriptProperties.getProperty(PROJECT_KEY_PROPERTY_NAME);
+  if (key == null) {
+    key = "";
+  }
+  return key;
+}
+
+/**
+ * @param String Project key
+ */
+function setProjectKey(key) {
+  scriptProperties.setProperty(PROJECT_KEY_PROPERTY_NAME, key);
 }
 
 /**
@@ -153,15 +197,16 @@ function setConsumerKey(key) {
  *      of String for loggable resources, i.e. "foods/log/caloriesIn"
  */
 function setLoggables(loggable) {
-  ScriptProperties.setProperty("loggables", loggable);
+  scriptProperties.setProperty('loggables', loggable);
 }
+
 /**
  * Returns the loggable resources as String[]
- * 
+ *
  * @return String[] loggable resources
  */
 function getLoggables() {
-  var loggable = ScriptProperties.getProperty("loggables");
+  var loggable = scriptProperties.getProperty('loggables');
   if (loggable == null) {
     loggable = LOGGABLES;
   } else {
@@ -171,11 +216,11 @@ function getLoggables() {
 }
 
 function setPeriod(period) {
-  ScriptProperties.setProperty("period", period);
+  scriptProperties.setProperty('period', period);
 }
 
 function getPeriod() {
-  var period = ScriptProperties.getProperty("period");
+  var period = scriptProperties.getProperty('period');
   if (period == null) {
     period = "30d";
   }
@@ -186,7 +231,7 @@ function getPeriod() {
  * @return String OAuth consumer secret to use when tweeting.
  */
 function getConsumerSecret() {
-  var secret = ScriptProperties.getProperty(CONSUMER_SECRET_PROPERTY_NAME);
+  var secret = scriptProperties.getProperty(CONSUMER_SECRET_PROPERTY_NAME);
   if (secret == null) {
     secret = "";
   }
@@ -194,22 +239,23 @@ function getConsumerSecret() {
 }
 
 /**
- * @param String
- *      OAuth consumer secret to use when tweeting.
+ * @param String OAuth consumer secret to use when tweeting.
  */
 function setConsumerSecret(secret) {
-  ScriptProperties.setProperty(CONSUMER_SECRET_PROPERTY_NAME, secret);
+  scriptProperties.setProperty(CONSUMER_SECRET_PROPERTY_NAME, secret);
 }
 
 /** Retrieve config params from the UI and store them. */
 function saveConfiguration(e) {
-  setConsumerKey(e.parameter.consumerKey);
-  setConsumerSecret(e.parameter.consumerSecret);
-  setLoggables(e.parameter.loggables);
-  setPeriod(e.parameter.period);
-  var app = UiApp.getActiveApplication();
-  app.close();
-  return app;
+
+    setConsumerKey(e.parameter.clientID);
+    setConsumerSecret(e.parameter.consumerSecret);
+    setProjectKey(e.parameter.projectKey);
+    setLoggables(e.parameter.loggables);
+    setPeriod(e.parameter.period);
+    var app = UiApp.getActiveApplication();
+    app.close();
+    return app;
 }
 /**
  * Configure all UI components and display a dialog to allow the user to
@@ -219,24 +265,34 @@ function renderFitbitConfigurationDialog() {
   var doc = SpreadsheetApp.getActiveSpreadsheet();
   var app = UiApp.createApplication().setTitle("Configure Fitbit");
   app.setStyleAttribute("padding", "10px");
+  app.setHeight('380');
 
   var helpLabel = app
-      .createLabel("From here you will configure access to fitbit -- Just supply your own"
-          + "consumer key and secret \n\n"
-          + "Important:  To authroize this app you need to load the script in the script editor"
-          + " (tools->Script Manager) and then run the 'authorize' script.");
+       .createLabel("From here you will configure access to fitbit -- Just supply your own"
+           + "client id and secret from dev.fitbit.com.  "
+           + " You can find the project key by loading the script in the script editor"
+           + " (tools->Script Editor..) and opening the project properties (file->Project properties). \n\n"
+           + " While in the script editor, you also need to add the OAuth2 library following these instructions: https://github.com/googlesamples/apps-script-oauth2/tree/0e7bcd464962321a75ccb97256d5373b27c4c2e1#setup. \n\n"
+           + " You also need to setup your Redirect URI at fitbit, substituting in your project key you just found and "
+           + "using the instructions here: https://github.com/googlesamples/apps-script-oauth2/tree/0e7bcd464962321a75ccb97256d5373b27c4c2e1#redirect-uri \n\n"
+           + "Important:  To authorize this app you need to run 'Authorize' from the fitbit menu.");
   helpLabel.setStyleAttribute("text-align", "justify");
   helpLabel.setWidth("95%");
-  var consumerKeyLabel = app.createLabel("Fitbit OAuth Consumer Key:");
+  var consumerKeyLabel = app.createLabel("Fitbit OAuth 2.0 Client ID:");
   var consumerKey = app.createTextBox();
-  consumerKey.setName("consumerKey");
+  consumerKey.setName("clientID");
   consumerKey.setWidth("100%");
   consumerKey.setText(getConsumerKey());
-  var consumerSecretLabel = app.createLabel("Fitbit OAuth Consumer Secret:");
+  var consumerSecretLabel = app.createLabel("Fitbit OAuth Client (Consumer) Secret:");
   var consumerSecret = app.createTextBox();
   consumerSecret.setName("consumerSecret");
   consumerSecret.setWidth("100%");
   consumerSecret.setText(getConsumerSecret());
+  var projectKeyLabel = app.createLabel("Project Key:");
+  var projectKey = app.createTextBox();
+  projectKey.setName("projectKey");
+  projectKey.setWidth("100%");
+  projectKey.setText(getProjectKey());
 
   var saveHandler = app.createServerClickHandler("saveConfiguration");
   var saveButton = app.createButton("Save Configuration", saveHandler);
@@ -246,6 +302,8 @@ function renderFitbitConfigurationDialog() {
   listPanel.setWidget(1, 1, consumerKey);
   listPanel.setWidget(2, 0, consumerSecretLabel);
   listPanel.setWidget(2, 1, consumerSecret);
+  listPanel.setWidget(3, 0, projectKeyLabel);
+  listPanel.setWidget(3, 1, projectKey);
 
   // add checkboxes to select loggables
   var loggables = app.createListBox(true).setId("loggables").setName("loggables");
@@ -257,8 +315,8 @@ function renderFitbitConfigurationDialog() {
 			loggables.setItemSelected(parseInt(resource), true);
 		}
   }
-  listPanel.setWidget(3, 0, app.createLabel("Resources:"));
-  listPanel.setWidget(3, 1, loggables);
+  listPanel.setWidget(4, 0, app.createLabel("Resources:"));
+  listPanel.setWidget(4, 1, loggables);
 
   var period = app.createListBox(false).setId("period").setName("period");
   period.setVisibleItemCount(1);
@@ -267,8 +325,8 @@ function renderFitbitConfigurationDialog() {
     period.addItem(PERIODS[resource]);
   }
   period.setSelectedIndex(PERIODS.indexOf(getPeriod()));
-  listPanel.setWidget(4, 0, app.createLabel("Period:"));
-  listPanel.setWidget(4, 1, period);
+  listPanel.setWidget(5, 0, app.createLabel("Period:"));
+  listPanel.setWidget(5, 1, period);
 
   // Ensure that all form fields get sent along to the handler
   saveHandler.addCallbackElement(listPanel);
@@ -281,81 +339,95 @@ function renderFitbitConfigurationDialog() {
   doc.show(app);
 }
 
+function getService() {
+  //Implement updated OAuth 2 support
+  //When using new OAuth1 library, callback URL length is too long, therefore doesn't work:
+  // https://github.com/googlesamples/apps-script-oauth1/issues/8
+  //
+  //Fitbit API:
+  //https://wiki.fitbit.com/display/API/OAuth+2.0
+  //Google App Script OAuth2 instructions:
+  //https://github.com/googlesamples/apps-script-oauth2
+
+  //modified from : https://github.com/googlesamples/apps-script-oauth1/issues/8#issuecomment-100309694
+
+  return OAuth2.createService('fitbit')
+      .setAuthorizationBaseUrl('https://www.fitbit.com/oauth2/authorize')
+      .setTokenUrl('https://api.fitbit.com/oauth2/token')
+      .setClientId(getConsumerKey())
+      .setClientSecret(getConsumerSecret())
+      .setProjectKey(getProjectKey())
+      .setCallbackFunction('fitbitAuthCallback')
+      .setPropertyStore(PropertiesService.getScriptProperties())
+      .setScope('activity')
+      .setTokenHeaders({
+        'Authorization': 'Basic ' + Utilities.base64Encode(getConsumerKey() + ':' + getConsumerSecret())
+      });
+
+}
+
 function authorize() {
-  var oAuthConfig = UrlFetchApp.addOAuthService("fitbit");
-  oAuthConfig.setAccessTokenUrl("https://api.fitbit.com/oauth/access_token");
-  oAuthConfig.setRequestTokenUrl("https://api.fitbit.com/oauth/request_token");
-  oAuthConfig.setAuthorizationUrl("https://api.fitbit.com/oauth/authorize");
-  oAuthConfig.setConsumerKey(getConsumerKey());
-  oAuthConfig.setConsumerSecret(getConsumerSecret());
+  var service = getService()
 
-  var options = {
-    "oAuthServiceName" : "fitbit",
-    "oAuthUseToken" : "always"
-  };
+  if (service.hasAccess()) {
+    var url = 'https://api.fitbit.com/1/user/-/profile.json';
+       var response = UrlFetchApp.fetch(url, {
+      headers: {
+        'Authorization': 'Bearer ' + service.getAccessToken()
+      }
+    });
+    Logger.log(JSON.stringify(JSON.parse(response.getContentText()), null, 2));
+    return JSON.parse(response.getContentText())
+  } else {
+    var authorizationUrl = service.getAuthorizationUrl();
+    var template = HtmlService.createTemplate(
+        '<a href="<?= authorizationUrl ?>" target="_blank">Authorize</a>. ' +
+        'Reopen the sidebar when the authorization is complete.');
+    template.authorizationUrl = authorizationUrl;
+    var page = template.evaluate();
+    SpreadsheetApp.getUi().showSidebar(page);
+  }
+}
 
-  // get The profile but don't do anything with it -- just to force
-  // authentication
-  var result = UrlFetchApp.fetch(
-      "https://api.fitbit.com/1/user/-/profile.json", options);
-  var o = Utilities.jsonParse(result.getContentText());
-
-  return o.user;
-  // options are dateOfBirth, nickname, state, city, fullName, etc. see
-  // http://wiki.fitbit.com/display/API/API-Get-User-Info
+// modified from: https://github.com/googlesamples/apps-script-oauth1/tree/9d074adc735e35c8966bcfa30114c205d69ab44e#3-handle-the-callback
+function fitbitAuthCallback(request) {
+  var service = getService();
+  var isAuthorized = service.handleCallback(request);
+  if (isAuthorized) {
+    return HtmlService.createHtmlOutput('Success! You can close this page.');
+  } else {
+    return HtmlService.createHtmlOutput('Denied. You can close this page');
+  }
 }
 
 /** When the spreadsheet is opened, add a Fitbit menu. */
 function onOpen() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var menuEntries = [ {
-    name : "Refresh fitbit Time Data",
-    functionName : "refreshTimeSeries"
-  }, {
-    name : "Configure",
-    functionName : "renderFitbitConfigurationDialog"
-  } ];
-  ss.addMenu("Fitbit", menuEntries);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var menuEntries = [{
+        name: "Refresh fitbit Time Data",
+        functionName: "refreshTimeSeries"
+    },
+    {
+        name: "Configure",
+        functionName: "renderFitbitConfigurationDialog"
+    },
+    {
+        name: "Authorize",
+        functionName: "authorize"
+    }];
+    ss.addMenu("Fitbit", menuEntries);
 }
 
 function onInstall() {
-  onOpen();
-  // put the menu when script is installed
-}
-
-function dump(arr, level) {
-  var dumped_text = "";
-  if (!level)
-    level = 0;
-
-  // The padding given at the beginning of the line.
-  var level_padding = "";
-  for ( var j = 0; j < level + 1; j++)
-    level_padding += "  ";
-
-  if (typeof (arr) == 'object') { // Array/Hashes/Objects
-    for ( var item in arr) {
-      var value = arr[item];
-
-      if (typeof (value) == 'object') { // If it is an array,
-        dumped_text += level_padding + "'" + item + "' ...\n";
-        dumped_text += dump(value, level + 1);
-      } else {
-        dumped_text += level_padding + "'" + item + "' => \"" + value
-            + "\"\n";
-      }
-    }
-  } else { // Stings/Chars/Numbers etc.
-    dumped_text = "===>" + arr + "<===(" + typeof (arr) + ")";
-  }
-  return dumped_text;
+    onOpen();
+    // put the menu when script is installed
 }
 
 // Find the right row for a date.
 function findRow(date) {
   var doc = SpreadsheetApp.getActiveSpreadsheet();
   var cell = doc.getRange("A3");
-  
+
   // Find the first cell in first column which is either empty,
   // or has an equal or bigger date than the one we are looking for.
   while ((cell.getValue() != "") && (cell.getValue() < date)) {
